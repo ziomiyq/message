@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LETOUT! — Post a Thought</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="logo" href="#">LETOUT<span>!</span></a>
+    <nav id="nav">
+      <a href="#featured">Featured</a>
+      <a href="#thoughts">Thoughts</a>
+      <a href="#categories">Categories</a>
+    </nav>
+    <button class="menu-btn" id="menuBtn" type="button">☰</button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy animate fade-up">
+        <p class="eyebrow">MADE FOR RANDOM THOUGHTS</p>
+        <h1>Got a thought?</h1>
+        <p class="subtitle">Say it. Share it. Leave it here. No need to overthink it.</p>
+        <button class="primary-btn" id="postBtn" type="button">Post a thought →</button>
+      </div>
+
+      <div class="hero-doodle animate fade-up delay-2">
+        <div class="doodle-circle"><span>?</span></div>
+        <p>hmm...</p>
+      </div>
+    </section>
+
+    <section class="search-area">
+      <div class="search-box animate fade-up">
+        <span>⌕</span>
+        <input id="searchInput" type="search" placeholder="Search thoughts..." autocomplete="off">
+        <kbd>Ctrl K</kbd>
+      </div>
+      <div id="searchSuggestions" class="search-suggestions"></div>
+      <p id="resultCount" class="result-count">Showing all thoughts</p>
+    </section>
+
+    <section id="featured" class="section">
+      <div class="section-heading animate fade-left">
+        <div>
+          <p class="eyebrow">HAND-PICKED</p>
+          <h2>Featured</h2>
+        </div>
+      </div>
+
+      <article class="featured-card animate fade-up" id="featuredCard">
+        <div class="featured-art">“</div>
+        <div class="featured-info">
+          <span class="tag">THOUGHT OF THE MOMENT</span>
+          <h3 id="featuredTitle">Nothing is too random.</h3>
+          <p id="featuredText">Sometimes the smallest thought is worth putting somewhere.</p>
+          <button class="outline-btn" id="featuredPostBtn" type="button">Share yours</button>
+        </div>
+      </article>
+    </section>
+
+    <section id="thoughts" class="section">
+      <div class="section-heading animate fade-left">
+        <div>
+          <p class="eyebrow">WHAT'S ON YOUR MIND?</p>
+          <h2>All thoughts</h2>
+        </div>
+        <select id="categoryFilter" aria-label="Filter thoughts by category">
+          <option value="all">All categories</option>
+          <option value="random">Random</option>
+          <option value="school">School</option>
+          <option value="life">Life</option>
+          <option value="funny">Funny</option>
+          <option value="question">Question</option>
+        </select>
+      </div>
+
+      <div id="thoughtGrid" class="thought-grid"></div>
+
+      <div id="emptyState" class="empty-state" hidden>
+        <div>¯\_(ツ)_/¯</div>
+        <h3>No thoughts found</h3>
+        <p>Try another search or category.</p>
+      </div>
+    </section>
+
+    <section id="suggestions" class="section suggestion-section">
+      <div class="section-heading animate fade-left">
+        <div>
+          <p class="eyebrow">GOT AN IDEA?</p>
+          <h2>Suggestion Box</h2>
+        </div>
+      </div>
+
+      <div class="suggestion-card animate fade-up">
+        <p>Have an idea, feature request, or something you want LETOUT! to be? Drop it here.</p>
+        <div id="suggestionsClosedMessage" class="suggestion-closed-message" hidden>Suggestions are temporarily closed.</div>
+        <form id="suggestionForm">
+          <label for="suggestionInput">Your suggestion</label>
+          <textarea id="suggestionInput" maxlength="1000" placeholder="I think LETOUT! should..." required></textarea>
+          <div class="suggestion-bottom">
+            <span id="suggestionCount">0 / 1000</span>
+            <button class="primary-btn" type="submit">Send suggestion →</button>
+          </div>
+          <p id="suggestionStatus" class="suggestion-status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+
+    <section id="categories" class="section">
+      <div class="section-heading animate fade-left">
+        <div>
+          <p class="eyebrow">PICK A MOOD</p>
+          <h2>Categories</h2>
+        </div>
+      </div>
+
+      <div class="category-list animate fade-up">
+        <button class="category-jump" data-category="random" type="button">✦ Random</button>
+        <button class="category-jump" data-category="school" type="button">✎ School</button>
+        <button class="category-jump" data-category="life" type="button">☁ Life</button>
+        <button class="category-jump" data-category="funny" type="button">☻ Funny</button>
+        <button class="category-jump" data-category="question" type="button">? Question</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="cannotPostPopup" class="notice-popup" aria-hidden="true">
+    <div class="notice-popup-card" role="dialog" aria-modal="true" aria-labelledby="cannotPostTitle">
+      <button id="cannotPostClose" class="notice-popup-close" type="button" aria-label="Close">×</button>
+      <div class="notice-popup-doodle">!</div>
+      <p class="eyebrow">JUST A NOTE</p>
+      <h2 id="cannotPostTitle">Cannot post</h2>
+      <p>Posting thoughts are temporarily closed.</p>
+      <button id="cannotPostOkay" class="primary-btn" type="button">Okay</button>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-logo">LETOUT!</div>
+    <p>For thoughts that don't fit anywhere else.</p>
+    <span>© 2026</span>
+  </footer>
+
+  <div id="thoughtViewer" class="thought-viewer" aria-hidden="true">
+    <div class="thought-viewer-card" role="dialog" aria-modal="true" aria-labelledby="viewerText">
+      <button id="viewerClose" class="thought-viewer-close" type="button" aria-label="Close expanded thought">×</button>
+      <div class="thought-viewer-top">
+        <span id="viewerCategory" class="category"></span>
+        <span id="viewerDate" class="thought-date"></span>
+      </div>
+      <p id="viewerText" class="thought-viewer-text"></p>
+    </div>
+  </div>
+
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button id="closeModal" class="close-btn" type="button" aria-label="Close">×</button>
+      <div class="modal-doodle">✎</div>
+      <p class="eyebrow">POST A THOUGHT</p>
+      <h2 id="modalTitle">What's on your mind?</h2>
+
+      <form id="thoughtForm">
+        <label for="thoughtInput">Your thought</label>
+        <textarea id="thoughtInput" placeholder="Type something..." required></textarea>
+
+        <div class="form-row">
+          <label for="thoughtCategory">Category</label>
+          <select id="thoughtCategory">
+            <option value="random">Random</option>
+            <option value="school">School</option>
+            <option value="life">Life</option>
+            <option value="funny">Funny</option>
+            <option value="question">Question</option>
+          </select>
+        </div>
+
+        <div class="char-count"><span id="charCount">0</span> characters</div>
+        <button class="primary-btn submit-btn" type="submit">Post thought →</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
+  
