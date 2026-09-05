@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LETOUT! — Admin</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: #f7f7f5; color: #111; }
+    header { background: #fff; border-bottom: 3px solid #111; padding: 18px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .logo { font-size: 32px; font-weight: 800; text-decoration:none; color:#111; }
+    .logo span { font-weight:400; }
+    main { max-width: 1100px; margin: 0 auto; padding: 28px 18px 60px; }
+    .panel { background:#fff; border:2px solid #111; padding:22px; box-shadow:6px 6px 0 #111; }
+    .login { max-width: 460px; margin: 50px auto; }
+    h1,h2 { margin-top:0; }
+    label { display:block; font-weight:700; margin:14px 0 7px; }
+    input { width:100%; padding:13px; border:2px solid #111; font-size:16px; background:#fff; }
+    button { border:2px solid #111; background:#111; color:#fff; padding:12px 16px; font-weight:700; cursor:pointer; }
+    button.secondary { background:#fff; color:#111; }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+    .error { color:#b00020; margin-top:12px; min-height:20px; }
+    .muted { color:#666; }
+    .hidden { display:none !important; }
+    .topline { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+    .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px; }
+    .stat { border:2px solid #111; padding:16px; background:#fff; }
+    .stat strong { display:block; font-size:30px; margin-top:6px; }
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+    .toolbar input { flex:1; min-width:220px; }
+    .thoughts { display:grid; gap:12px; }
+    .thought { border:2px solid #111; background:#fff; padding:16px; }
+    .thought-actions { display:flex; justify-content:flex-end; margin-top:14px; }
+    .delete-btn { background:#b00020; border-color:#b00020; }
+    .delete-btn:hover { opacity:.9; }
+    .meta { display:flex; justify-content:space-between; gap:10px; font-size:13px; margin-bottom:10px; flex-wrap:wrap; }
+    .category { font-weight:800; text-transform:uppercase; }
+    .date { color:#666; }
+    .text { font-size:17px; line-height:1.5; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .status { margin-top:12px; font-size:13px; color:#555; }
+    @media (max-width:700px) { .stats { grid-template-columns:1fr; } header { padding:15px; } .logo { font-size:28px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="logo" href="./index.html">LETOUT<span>!</span></a>
+    <button id="logoutBtn" class="secondary hidden" type="button">Log out</button>
+  </header>
+
+  <main>
+    <section id="loginPanel" class="panel login">
+      <h1>Admin login</h1>
+      <p class="muted">Sign in to view the thoughts submitted to LETOUT!.</p>
+      <form id="loginForm">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="username" required>
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" required>
+        <div class="actions"><button type="submit">Sign in</button></div>
+        <div id="loginError" class="error"></div>
+      </form>
+    </section>
+
+    <section id="dashboard" class="hidden">
+      <div class="topline">
+        <div>
+          <p class="muted">LETOUT! ADMIN</p>
+          <h1>All thoughts</h1>
+          <p id="signedInAs" class="muted"></p>
+        </div>
+        <div class="actions"><button id="refreshBtn" class="secondary" type="button">Refresh</button></div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">Total thoughts<strong id="totalCount">0</strong></div>
+        <div class="stat">Latest category<strong id="latestCategory">—</strong></div>
+        <div class="stat">Last posted<strong id="latestDate">—</strong></div>
+      </div>
+
+      <div class="panel">
+        <div class="toolbar">
+          <input id="search" type="search" placeholder="Search thoughts..." autocomplete="off">
+          <button id="clearSearch" class="secondary" type="button">Clear</button>
+        </div>
+        <div id="thoughts" class="thoughts"></div>
+        <p id="empty" class="muted hidden">No thoughts found.</p>
+        <p id="status" class="status">Connecting…</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "https://mgdywszmxzluptzohumc.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_SVJO77qF5GweYYKuo3dZDQ_GuRfJjqT";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+    const loginPanel = document.getElementById('loginPanel');
+    const dashboard = document.getElementById('dashboard');
+    const loginForm = document.getElementById('loginForm');
+    const loginError = document.getElementById('loginError');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const search = document.getElementById('search');
+    const clearSearch = document.getElementById('clearSearch');
+    const thoughtsEl = document.getElementById('thoughts');
+    const empty = document.getElementById('empty');
+    const status = document.getElementById('status');
+    const totalCount = document.getElementById('totalCount');
+    const latestCategory = document.getElementById('latestCategory');
+    const latestDate = document.getElementById('latestDate');
+    const signedInAs = document.getElementById('signedInAs');
+
+    let thoughts = [];
+    let channel = null;
+
+    function escapeHTML(value) {
+      const div = document.createElement('div');
+      div.textContent = value ?? '';
+      return div.innerHTML;
+    }
+
+    function formatDate(value) {
+      if (!value) return '—';
+      return new Date(value).toLocaleString();
+    }
+
+    function render() {
+      const q = search.value.trim().toLowerCase();
+      const visible = thoughts.filter(t =>
+        !q || String(t.text).toLowerCase().includes(q) || String(t.category).toLowerCase().includes(q)
+      );
+
+      thoughtsEl.innerHTML = visible.map(t => `
+        <article class="thought">
+          <div class="meta">
+            <span class="category">${escapeHTML(t.category || 'random')}</span>
+            <span class="date">${escapeHTML(formatDate(t.created_at))}</span>
+          </div>
+          <div class="text">${escapeHTML(t.text)}</div>
+          <div class="thought-actions">
+            <button class="delete-btn" type="button" data-delete-id="${escapeHTML(String(t.id))}">Delete</button>
+          </div>
+        </article>
+      `).join('');
+
+      empty.classList.toggle('hidden', visible.length !== 0);
+      totalCount.textContent = thoughts.length;
+      latestCategory.textContent = thoughts[0]?.category || '—';
+      latestDate.textContent = thoughts[0]?.created_at ? formatDate(thoughts[0].created_at) : '—';
+    }
+
+    async function loadThoughts() {
+      status.textContent = 'Loading…';
+      const { data, error } = await supabaseClient
+        .from('thoughts')
+        .select('id, text, category, created_at')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error(error);
+        status.textContent = 'Could not load thoughts. Check your Supabase RLS policy.';
+        return;
+      }
+
+      thoughts = data || [];
+      render();
+      status.textContent = 'Live — updates will appear automatically when Realtime is enabled for the thoughts table.';
+    }
+
+    async function showDashboard(session) {
+      loginPanel.classList.add('hidden');
+      dashboard.classList.remove('hidden');
+      logoutBtn.classList.remove('hidden');
+      signedInAs.textContent = session.user.email || '';
+      await loadThoughts();
+
+      if (!channel) {
+        channel = supabaseClient
+          .channel('admin-thoughts-live')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'thoughts' }, payload => {
+            if (payload.eventType === 'INSERT') thoughts.unshift(payload.new);
+            if (payload.eventType === 'UPDATE') thoughts = thoughts.map(t => t.id === payload.new.id ? payload.new : t);
+            if (payload.eventType === 'DELETE') thoughts = thoughts.filter(t => t.id !== payload.old.id);
+            render();
+            status.textContent = 'Live — received a database update.';
+          })
+          .subscribe();
+      }
+    }
+
+    loginForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      loginError.textContent = '';
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) {
+        loginError.textContent = error.message;
+        return;
+      }
+      await showDashboard(data.session);
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      if (channel) { await supabaseClient.removeChannel(channel); channel = null; }
+      dashboard.classList.add('hidden');
+      loginPanel.classList.remove('hidden');
+      logoutBtn.classList.add('hidden');
+      loginForm.reset();
+    });
+
+    thoughtsEl.addEventListener('click', async event => {
+      const button = event.target.closest('[data-delete-id]');
+      if (!button) return;
+
+      const id = button.dataset.deleteId;
+      const thought = thoughts.find(t => String(t.id) === String(id));
+      if (!thought) return;
+
+      const confirmed = confirm('Delete this thought permanently?\n\n' + thought.text);
+      if (!confirmed) return;
+
+      button.disabled = true;
+      button.textContent = 'Deleting…';
+      status.textContent = 'Deleting…';
+
+      const { error } = await supabaseClient
+        .from('thoughts')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error(error);
+        button.disabled = false;
+        button.textContent = 'Delete';
+        status.textContent = 'Delete failed. Check your Supabase DELETE RLS policy.';
+        alert('Couldn\'t delete the thought. Your Supabase RLS policy may not allow DELETE.');
+        return;
+      }
+
+      thoughts = thoughts.filter(t => String(t.id) !== String(id));
+      render();
+      status.textContent = 'Thought deleted.';
+    });
+
+    refreshBtn.addEventListener('click', loadThoughts);
+    search.addEventListener('input', render);
+    clearSearch.addEventListener('click', () => { search.value = ''; render(); });
+
+    (async () => {
+      const { data } = await supabaseClient.auth.getSession();
+      if (data.session) await showDashboard(data.session);
+    })();
+  </script>
+</body>
+  </html>
+  
